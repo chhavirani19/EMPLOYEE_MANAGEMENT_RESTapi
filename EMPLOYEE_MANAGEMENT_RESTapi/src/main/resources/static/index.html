@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Employee Management</title>
+<style>
+  :root { --bg:#f5f6f8; --card:#fff; --text:#1d2330; --muted:#5f6b7a; --line:#dde1e7; --accent:#2f6fde; --ok:#1f8a4c; --err:#c0392b; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#14171c; --card:#1d2128; --text:#e6e9ee; --muted:#9aa4b2; --line:#2e343d; --accent:#6c9bff; --ok:#4cc38a; --err:#ff7b6b; } }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.5 system-ui, Segoe UI, Roboto, sans-serif; }
+  main { max-width:960px; margin:0 auto; padding:24px 16px 48px; }
+  h1 { margin:0 0 4px; font-size:24px; }
+  p.sub { margin:0 0 20px; color:var(--muted); }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:16px; }
+  section { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px; }
+  h2 { margin:0 0 10px; font-size:15px; }
+  code.m { font-size:12px; padding:2px 6px; border-radius:4px; background:var(--bg); color:var(--accent); margin-right:6px; }
+  input { width:100%; padding:8px 10px; margin-bottom:8px; border:1px solid var(--line); border-radius:6px; background:var(--bg); color:var(--text); font:inherit; }
+  button { padding:8px 14px; border:0; border-radius:6px; background:var(--accent); color:#fff; font:inherit; cursor:pointer; }
+  button.danger { background:var(--err); }
+  table { width:100%; border-collapse:collapse; margin-top:10px; }
+  th, td { text-align:left; padding:8px; border-bottom:1px solid var(--line); }
+  th { color:var(--muted); font-weight:600; font-size:13px; }
+  pre { margin:0; white-space:pre-wrap; word-break:break-word; font-size:13px; }
+  .status { font-weight:600; margin-bottom:6px; }
+  .status.ok { color:var(--ok); } .status.err { color:var(--err); }
+  .full { grid-column:1 / -1; }
+  .table-wrap { overflow-x:auto; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Employee Management REST API</h1>
+  <p class="sub">Test every endpoint from the browser. The raw API is at <a href="/api/employees">/api/employees</a>.</p>
+
+  <div class="grid">
+    <section>
+      <h2><code class="m">POST</code>(b) Add employee</h2>
+      <input id="addName" placeholder="Name">
+      <input id="addDept" placeholder="Department">
+      <input id="addSalary" type="number" placeholder="Salary">
+      <button onclick="addEmployee()">Add</button>
+    </section>
+
+    <section>
+      <h2><code class="m">GET</code>(c) Get employee by ID</h2>
+      <input id="getId" type="number" placeholder="Employee ID">
+      <button onclick="getById()">Get</button>
+    </section>
+
+    <section>
+      <h2><code class="m">PUT</code>(d) Update employee</h2>
+      <input id="updId" type="number" placeholder="Employee ID">
+      <input id="updName" placeholder="New name">
+      <input id="updDept" placeholder="New department">
+      <input id="updSalary" type="number" placeholder="New salary">
+      <button onclick="updateEmployee()">Update</button>
+    </section>
+
+    <section>
+      <h2><code class="m">DELETE</code>(e) Delete employee</h2>
+      <input id="delId" type="number" placeholder="Employee ID">
+      <button class="danger" onclick="deleteEmployee()">Delete</button>
+    </section>
+
+    <section class="full">
+      <h2>Response</h2>
+      <div id="status" class="status">Ready</div>
+      <pre id="output">Use the forms above to call the API.</pre>
+    </section>
+
+    <section class="full">
+      <h2><code class="m">GET</code>(c) All employees <button style="float:right" onclick="loadAll()">Refresh</button></h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>ID</th><th>Name</th><th>Department</th><th>Salary</th></tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</main>
+
+<script>
+  const API = '/api/employees';
+  const val = id => document.getElementById(id).value.trim();
+
+  async function call(method, url, body) {
+    const options = { method, headers: { 'Content-Type': 'application/json' } };
+    if (body) options.body = JSON.stringify(body);
+    const res = await fetch(url, options);
+    const text = await res.text();
+    const status = document.getElementById('status');
+    status.textContent = method + ' ' + url + '  ->  HTTP ' + res.status;
+    status.className = 'status ' + (res.ok ? 'ok' : 'err');
+    try { document.getElementById('output').textContent = JSON.stringify(JSON.parse(text), null, 2); }
+    catch { document.getElementById('output').textContent = text; }
+    loadAll();
+  }
+
+  function addEmployee() {
+    call('POST', API, { name: val('addName'), department: val('addDept'), salary: Number(val('addSalary')) });
+  }
+  function getById() { call('GET', API + '/' + val('getId')); }
+  function updateEmployee() {
+    call('PUT', API + '/' + val('updId'), { name: val('updName'), department: val('updDept'), salary: Number(val('updSalary')) });
+  }
+  function deleteEmployee() { call('DELETE', API + '/' + val('delId')); }
+
+  async function loadAll() {
+    const res = await fetch(API);
+    const list = await res.json();
+    const rows = document.getElementById('rows');
+    rows.innerHTML = '';
+    list.forEach(e => {
+      const tr = document.createElement('tr');
+      [e.id, e.name, e.department, e.salary].forEach(v => {
+        const td = document.createElement('td');
+        td.textContent = v;
+        tr.appendChild(td);
+      });
+      rows.appendChild(tr);
+    });
+  }
+  loadAll();
+</script>
+</body>
+</html>
